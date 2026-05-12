@@ -27,6 +27,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
 
     protected const AGENT_COLETIVO_TYPE_ID = 2;
     protected const AGENT_INDIVIDUAL_TYPE_ID = 1;
+    protected const PROPONENT_TYPES_WITH_COLLECTIVE_AGENT_RELATION = ['Coletivo', 'Pessoa Jurídica'];
 
     /** Opções de "outras modalidades" que exigem sublista de subcategorias (fonte única para PHP e frontend) */
     public const OPTIONS_OTHER_MODALITIES_WITH_SUBLIST = ['bonus_agentes', 'bonus_tematicas', 'categoria_especifica', 'edital_especifico'];
@@ -65,6 +66,10 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
         $theme = $this;
         $isOpportunityGeneratedFromModel = fn($entity) => $this->isOpportunityGeneratedFromModel($entity);
         $isCultBrCreateNotYetSynced = fn($entity) => !$this->isOpportunityCultBrCreateSynced($entity);
+
+        $app->hook('entity(Opportunity).jsonSerialize', function (&$result) use ($theme) {
+            $theme->sanitizeProponentAgentRelationPayload($result);
+        });
 
         /**
          * Controla a renderização do link "Oportunidades" no header baseado no acesso do usuário
@@ -1137,6 +1142,29 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
          */
         $app->hook('entity(Agent).validationErrors', function (array &$errors) use ($app) {
             /** @var \MapasCulturais\Entities\Agent $this */
+            $referer = $_SERVER['HTTP_REFERER'] ?? '';
+            $isCompleteProfileContext = is_string($referer) && stripos($referer, '/aldirblanc/completeProfile') !== false;
+
+            if ($isCompleteProfileContext && !empty($errors)) {
+                $theme = $app->view;
+                $typeId = is_object($this->type) ? ($this->type->id ?? null) : $this->type;
+                $typeId = $typeId === null ? null : (int) $typeId;
+
+                $requiredKeys = [];
+                if ($typeId === self::AGENT_COLETIVO_TYPE_ID && method_exists($theme, 'getRequeredsAgentColetivoMetadata')) {
+                    $requiredKeys = $theme->getRequeredsAgentColetivoMetadata();
+                } elseif (($typeId === self::AGENT_INDIVIDUAL_TYPE_ID || $typeId === null) && method_exists($theme, 'getRequeredsAgentIndividualMetadata')) {
+                    $requiredKeys = $theme->getRequeredsAgentIndividualMetadata();
+                }
+
+                foreach (array_keys($errors) as $field) {
+                    if (!in_array($field, $requiredKeys, true)) {
+                        unset($errors[$field]);
+                    }
+                }
+
+            }
+
             if (!empty($errors)) {
                 $controller = $app->controller('agent');
                 if ($controller && isset($controller->postData)) {
@@ -1361,6 +1389,27 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                         }
                         return false;
                     };
+                }
+
+                // PNAB (individual): desativa validação de campos fora do formulário.
+                $individualHiddenFieldsWithoutForm = ['telefone2', 'telefone1', 'emailPublico', 'cnpj'];
+                foreach ($individualHiddenFieldsWithoutForm as $metaKey) {
+                    if (!isset($definitionsIndividual[$metaKey])) {
+                        continue;
+                    }
+
+                    $metaDef = $definitionsIndividual[$metaKey];
+                    $metaConfig = array_merge([], $metaDef->config);
+                    $metaConfig['validations'] = [];
+                    $metaConfig['should_validate'] = function () {
+                        return false;
+                    };
+
+                    $app->registerMetadata(
+                        new \MapasCulturais\Definitions\Metadata($metaKey, $metaConfig),
+                        $agentClass,
+                        $tipoIndividualId
+                    );
                 }
             }
         });
@@ -1913,6 +1962,24 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             i::__('Não'),
             i::__('Não sei informar'),
         );
+    }
+
+    public function sanitizeProponentAgentRelationPayload(array &$payload): void
+    {
+        $relations = $payload['proponentAgentRelation'] ?? null;
+        if (!is_array($relations) && !is_object($relations)) {
+            return;
+        }
+
+        $relations = (array) $relations;
+        foreach ($relations as $proponentType => $enabled) {
+            if (!in_array($proponentType, self::PROPONENT_TYPES_WITH_COLLECTIVE_AGENT_RELATION, true)) {
+                $relations[$proponentType] = false;
+            }
+        }
+
+        $payload['proponentAgentRelation'] = $relations;
+        $payload['useAgentRelationColetivo'] = in_array(true, $relations, true) ? 'required' : 'dontUse';
     }
 
     /**
