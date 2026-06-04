@@ -223,6 +223,7 @@ $gray-700: #19191c !default;
 @import './pages/search';
 @import './pages/federative-entity-opportunities';
 @import './pages/complete-profile';
+@import './pages/single-opportunity';
 
 
 .mc-header-logo {
@@ -824,4 +825,3 @@ body {
 .entity-card__footer--action .button {
     max-width: 272px;
 }
-
