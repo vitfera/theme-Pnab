@@ -63,6 +63,7 @@ class FederativeEntityAdminService
             'files' => [],
             'terms' => [],
             'seals' => [],
+            'children' => $this->getAssociatedAgentIds($entity),
             'relatedAgents' => [],
             'agentRelations' => [],
             'currentUserPermissions' => [
@@ -72,6 +73,31 @@ class FederativeEntityAdminService
             'singleUrl' => $this->app->createUrl('panel', 'federativeEntitySingle', [$entity->id]),
             'editUrl' => '#',
         ];
+    }
+
+    private function getAssociatedAgentIds(FederativeEntity $entity): array
+    {
+        $conn = $this->app->em->getConnection();
+
+        $sql = "
+            SELECT DISTINCT a.id
+            FROM agent_relation ar
+            INNER JOIN agent a ON a.id = ar.agent_id
+            WHERE ar.object_type = :objectType
+                AND ar.object_id = :objectId
+                AND a.status = 1
+            ORDER BY a.id ASC
+        ";
+
+        $result = $conn->executeQuery($sql, [
+            'objectType' => self::OBJECT_TYPE,
+            'objectId' => $entity->id,
+        ]);
+
+        return array_map(
+            fn($id) => ['id' => (int) $id],
+            array_column($this->fetchAll($result), 'id')
+        );
     }
 
     private function fetchAll($result): array

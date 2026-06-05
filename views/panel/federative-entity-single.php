@@ -52,6 +52,9 @@ $this->breadcrumb = [
                             <entity-links :entity="entity" classes="col-12" title="<?php i::_e('Links'); ?>"></entity-links>
                             <entity-gallery-video :entity="entity" classes="col-12"></entity-gallery-video>
                             <entity-gallery :entity="entity" classes="col-12"></entity-gallery>
+                            <div v-if="entity.children?.length > 0" class="col-12">
+                                <entity-list title="<?php i::esc_attr_e('Agentes');?>" type="agent" :ids="entity.children"></entity-list>
+                            </div>
                         </div>
                     </main>
                     <aside>
