@@ -179,6 +179,42 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
         });
 
         /**
+         * Valida compatibilidade da ação PAR antes de o core clonar o modelo.
+         * Roda antes de qualquer persistência — se inválido, nada é criado.
+         */
+        $app->hook('POST(opportunity.generateopportunity):before', function () {
+            if (!UserAccessService::isGestorCultBr()) {
+                return;
+            }
+
+            $model = $this->requestedEntity;
+            if (!$model) {
+                return;
+            }
+
+            $parAcaoId = (string) ($this->data['parAcaoId'] ?? '');
+            if ($parAcaoId === '') {
+                return;
+            }
+
+            $parActionsRaw = $model->getMetadata('parActions');
+            if (is_string($parActionsRaw)) {
+                $parActionsRaw = json_decode($parActionsRaw, true) ?? [];
+            }
+            $parActions = is_array($parActionsRaw) ? $parActionsRaw : [];
+
+            if (empty($parActions)) {
+                return;
+            }
+
+            $acaoNome = FederativeEntityService::getParActionNameByAcaoId($parAcaoId);
+            if ($acaoNome === null || !in_array($acaoNome, $parActions, true)) {
+                $this->errorJson(['parAcaoId' => [i::__('A ação selecionada não é compatível com este modelo.')]], 422);
+                return;
+            }
+        });
+
+        /**
          * Dispara o job de integração com o CultBR quando uma oportunidade é inserida
          */
         $app->hook('entity(Opportunity).insert:finish', function () use ($app, $theme) {
