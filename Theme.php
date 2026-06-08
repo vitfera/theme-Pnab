@@ -885,6 +885,14 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                 $_SESSION['gestor_cult_sync_error'] !== '';
 
             if (!$profile || !$profile->getMetadata('isNotGestorCultBr')) {
+                if (!$syncStarted && !$syncCompleted) {
+                    if (!$app->request->isAjax()) {
+                        $_SESSION['federative_entity_redirect_uri'] = $_SERVER['REQUEST_URI'] ?? "";
+                    }
+                    $app->redirect($app->createUrl('aldirblanc', 'consolidatingData'));
+                    return;
+                }
+
                 // Se há erro de sync, bloqueia e redireciona para consolidação
                 if ($syncCompleted && $hasError) {
                     if ($app->request->isAjax()) {
