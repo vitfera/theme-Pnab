@@ -73,13 +73,16 @@ app.component('opportunity-basic-info' , {
             return phase;
         },
 
+        isSaasSuperAdmin() {
+            return Boolean($MAPAS.config?.opportunityBasicInfo?.isSaasSuperAdmin);
+        },
+
         isOfficialModelAdmin() {
-            const config = $MAPAS.config?.opportunityBasicInfo || {};
             const isModel = String(this.entity?.isModel || '') === '1';
             const seals = this.entity?.seals || [];
             const hasVerificationSeal = seals.some((seal) => Boolean(seal.isVerificationSeal));
 
-            return Boolean(config.isSaasSuperAdmin && isModel && hasVerificationSeal);
+            return Boolean(this.isSaasSuperAdmin && isModel && hasVerificationSeal);
         },
 
         isEtapaOutra() {
