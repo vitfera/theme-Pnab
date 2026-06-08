@@ -995,6 +995,10 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
          * Validação de oportunidade: Exige arquivo de regulamento para validar
          */
         $app->hook('opportunity.canValidate', function (&$errors) {
+            if (UserAccessService::isSaasSuperAdmin()) {
+                return;
+            }
+
             $opportunity = $this;
 
             $regulations = $opportunity->getFiles('rules');
@@ -1025,7 +1029,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             }
 
             // Tipos do proponente obrigatórios apenas em edição, como já era feito antes
-            if (!$this->isNew() && !$this->isLastPhase) {
+            if (!$this->isNew() && !$this->isLastPhase && !UserAccessService::isSaasSuperAdmin()) {
                 if (!is_array($this->registrationProponentTypes)) {
                     $this->registrationProponentTypes = [];
                 }
@@ -1046,16 +1050,18 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             }
 
             if (!$this->isNew() && !$this->isLastPhase) {
-                // Validação de Tipos do proponente
-                $proponentTypes = $this->registrationProponentTypes;
-                if (!is_array($proponentTypes) || count($proponentTypes) === 0) {
-                    $errors['registrationProponentTypes'] = [i::__('O campo "Tipos do proponente" é obrigatório.')];
-                }
+                if (!UserAccessService::isSaasSuperAdmin()) {
+                    // Validação de Tipos do proponente
+                    $proponentTypes = $this->registrationProponentTypes;
+                    if (!is_array($proponentTypes) || count($proponentTypes) === 0) {
+                        $errors['registrationProponentTypes'] = [i::__('O campo "Tipos do proponente" é obrigatório.')];
+                    }
 
-                // Validação de Regulamento
-                $regulations = $this->getFiles('rules');
-                if (empty($regulations)) {
-                    $errors['rules'] = [i::__('O campo "Adicionar regulamento" é obrigatório.')];
+                    // Validação de Regulamento
+                    $regulations = $this->getFiles('rules');
+                    if (empty($regulations)) {
+                        $errors['rules'] = [i::__('O campo "Adicionar regulamento" é obrigatório.')];
+                    }
                 }
 
                 // Validação: Utilização de recursos de outras fontes
