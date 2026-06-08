@@ -173,6 +173,9 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             if (!$canAccess) {
                 $this->errorJson(\MapasCulturais\i::__('Criação não permitida'), 403);
             }
+            if (UserAccessService::isGestorCultBr()) {
+                $this->errorJson(\MapasCulturais\i::__('Criação não permitida'), 403);
+            }
         });
 
         /**
