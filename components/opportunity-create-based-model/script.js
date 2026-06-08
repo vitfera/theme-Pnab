@@ -200,6 +200,7 @@ app.component('opportunity-create-based-model', {
                 );
 
                 if (!generateOpportunityHttpResponse.ok) {
+                    const isValidationError = generateOpportunityHttpResponse.status === 422;
                     let errorMessageForUser = this.text(
                         'Não foi possível gerar a oportunidade. Tente novamente.'
                     );
@@ -208,18 +209,22 @@ app.component('opportunity-create-based-model', {
                             await generateOpportunityHttpResponse.json();
                         if (generateErrorResponseBody?.message) {
                             errorMessageForUser = generateErrorResponseBody.message;
-                        } else if (generateErrorResponseBody?.error) {
-                            errorMessageForUser =
-                                typeof generateErrorResponseBody.error === 'string'
-                                    ? generateErrorResponseBody.error
-                                    : errorMessageForUser;
+                        } else if (typeof generateErrorResponseBody?.error === 'string') {
+                            errorMessageForUser = generateErrorResponseBody.error;
+                        } else if (generateErrorResponseBody?.data && typeof generateErrorResponseBody.data === 'object') {
+                            const firstEntry = Object.values(generateErrorResponseBody.data)[0];
+                            errorMessageForUser = Array.isArray(firstEntry)
+                                ? firstEntry[0]
+                                : String(firstEntry ?? errorMessageForUser);
                         }
                     } catch {
                         /* mantém mensagem genérica */
                     }
                     this.messages.error(errorMessageForUser);
                     this.generating = false;
-                    modal.close();
+                    if (!isValidationError) {
+                        modal.close();
+                    }
                     return;
                 }
 
