@@ -75,8 +75,6 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
 
         $canAccess = UserAccessService::canAccess();
         $theme = $this;
-        $isOpportunityGeneratedFromModel = fn($entity) => $this->isOpportunityGeneratedFromModel($entity);
-        $isCultBrCreateNotYetSynced = fn($entity) => !$this->isOpportunityCultBrCreateSynced($entity);
 
         $app->hook('entity(Opportunity).jsonSerialize', function (&$result) use ($theme) {
             $theme->sanitizeProponentAgentRelationPayload($result);
@@ -233,10 +231,11 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
         });
 
         /**
-         * Job CultBR no update: Ativado → update (PUT); rascunho com isGeneratedFromModel → create (POST),
-         * após validateIntegrationJob (clone «usar modelo» não passa por insert:finish).
+         * Job CultBR no update: Ativado → enfileira update (PUT).
+         * O create (POST) do fluxo «usar modelo» é enfileirado explicitamente por saveOpportunityPostGenerate,
+         * garantindo que os dados PAR já estejam salvos antes do envio.
          */
-        $app->hook('entity(Opportunity).update:finish', function () use ($app, $theme, $isOpportunityGeneratedFromModel, $isCultBrCreateNotYetSynced) {
+        $app->hook('entity(Opportunity).update:finish', function () use ($app, $theme) {
             if (!$theme->validateIntegrationJob($this)) {
                 return;
             }
@@ -254,21 +253,6 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                     $start_string
                 );
                 return;
-            }
-
-            // Rascunho «usar modelo»: um único create até sucesso no Cult; PATCH seguintes não re-enfileiram.
-            if (
-                (int) $this->status === OpportunityStatus::DRAFT->value
-                && $isOpportunityGeneratedFromModel($this)
-                && $isCultBrCreateNotYetSynced($this)
-            ) {
-                $app->enqueueOrReplaceJob(
-                    OportunidadeCultJob::SLUG,
-                    [
-                        'action' => 'create',
-                        'opportunity' => $this,
-                    ],
-                );
             }
         });
 
@@ -2420,7 +2404,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
         }
 
         // Clone recém-criado via generateopportunity: isGeneratedFromModel ainda não foi gravado.
-        // Aguardar saveOpportunityPostGenerate; o update:finish enfileira após os dados estarem completos.
+        // O create job é enfileirado explicitamente por saveOpportunityPostGenerate, após os dados PAR estarem salvos.
         if (!empty($federativeEntityId) && !$isGeneratedFromModel) {
             return false;
         }
