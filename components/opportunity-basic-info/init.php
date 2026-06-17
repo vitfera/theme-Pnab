@@ -9,7 +9,7 @@ $entity = $this->controller->requestedEntity;
 
 $this->jsObject['config']['opportunityBasicInfo'] = [
     'date' => $entity::CONTINUOUS_FLOW_DATE,
-    'isSaasSuperAdmin' => UserAccessService::isSaasSuperAdmin(),
+    'canManageOfficialModelParActions' => UserAccessService::canAssociatePARAction(),
 ];
 
 $this->jsObject['config']['opportunityOtherOptions'] = [

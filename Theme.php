@@ -1019,7 +1019,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
          * Validação de oportunidade: Exige arquivo de regulamento para validar
          */
         $app->hook('opportunity.canValidate', function (&$errors) {
-            if (UserAccessService::isSaasSuperAdmin()) {
+            if (UserAccessService::canAssociatePARAction()) {
                 return;
             }
 

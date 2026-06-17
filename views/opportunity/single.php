@@ -124,7 +124,7 @@ $this->breadcrumb = [
                     </div>
                     <div class="flex-container">
                         <entity-terms :entity="entity" hide-required title="<?php i::_e('Área de Interesse') ?>" taxonomy="area"></entity-terms>
-                        <?php if (UserAccessService::isSaasSuperAdmin()): ?>
+                        <?php if (UserAccessService::canAssociatePARAction()): ?>
                             <div class="entity-terms col-12" v-if="String(entity.isModel || '') === '1' && entity.seals?.some(function(seal) { return Boolean(seal.isVerificationSeal); }) && entity.parActions && (!Array.isArray(entity.parActions) || entity.parActions.length)">
                                 <div class="entity-terms__header">
                                     <mc-title tag="h4" :short-length="0" size="medium" class="bold"><?php i::_e('Ações do PAR') ?></mc-title>
