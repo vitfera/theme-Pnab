@@ -243,6 +243,7 @@ $this->applyComponentHook('.sortOptions', [&$tabs]);
                     </div>
                     <div class="col-9 search-list__cards">
                         <div class="panel__row noEntity panel-entity-tabs__no-models-for-action">
+                            <strong><?= i::__('Ações permitidas para uso com modelos de oportunidades associados:') ?></strong>
                             <ul>
                                 <li><strong><?= i::__('Ação 1.1 - Fomento Cultural -') ?></strong> <?= i::__('Termo de Execução Cultural (Lei nº 14.903/2024)') ?>;</li>
                                 <li><strong><?= i::__('Ação 1.1 - Fomento Cultural -') ?></strong> <?= i::__('Prêmio (Lei nº 14.903/2024)') ?>;</li>
