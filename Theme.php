@@ -808,10 +808,15 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
          * Não redireciona admins (não há o que consolidar)
          */
         $app->hook('auth.successful', function () use ($app) {
+            $userId = $app->user->id ?? 'N/A';
+
             // Se for admin em qualquer nível, não precisa consolidar dados
             if (UserAccessService::isAdmin()) {
+                $app->log->info("[Gestores CultBR] Login de admin, consolidação ignorada | Usuário ID: {$userId}");
                 return;
             }
+
+            $app->log->info("[Gestores CultBR] Login bem-sucedido, agendando redirecionamento para consolidação | Usuário ID: {$userId}");
 
             // Limpa flags de sincronização anteriores (incluindo erros)
             unset($_SESSION['gestor_cult_sync_started']);
@@ -830,7 +835,9 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
         /**
          * Limpa a seleção de entidade federativa e flags de sync quando o usuário faz logout
          */
-        $app->hook('auth.logout:before', function () {
+        $app->hook('auth.logout:before', function () use ($app) {
+            $userId = $app->user->id ?? 'N/A';
+            $app->log->info("[Gestores CultBR] Logout, limpando flags de sincronização e seleção de Ente Federado | Usuário ID: {$userId}");
             unset($_SESSION['selectedFederativeEntity']);
             unset($_SESSION['federative_entity_redirect_uri']);
             unset($_SESSION['gestor_cult_sync_started']);
@@ -901,6 +908,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                 $_SESSION['gestor_cult_sync_error'] !== '';
 
             if (!$syncStarted && !$syncCompleted) {
+                $app->log->info("[Gestores CultBR] blockAccessOnError: sync não iniciado, redirecionando para consolidatingData | Usuário ID: {$app->user->id} | Rota: {$controllerId}.{$action}");
                 if (!$app->request->isAjax()) {
                     $_SESSION['federative_entity_redirect_uri'] = $_SERVER['REQUEST_URI'] ?? "";
                 }
@@ -910,6 +918,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
 
             // Se há erro de sync, bloqueia e redireciona para consolidação
             if ($syncCompleted && $hasError) {
+                $app->log->info("[Gestores CultBR] blockAccessOnError: sync concluído com erro, bloqueando acesso | Usuário ID: {$app->user->id} | Rota: {$controllerId}.{$action}");
                 if ($app->request->isAjax()) {
                     header('Content-Type: application/json');
                     http_response_code(403);
@@ -927,6 +936,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
 
             // Se o sync foi iniciado mas não foi concluído, redireciona para consolidação
             if ($syncStarted && !$syncCompleted) {
+                $app->log->info("[Gestores CultBR] blockAccessOnError: sync em andamento, redirecionando para consolidatingData | Usuário ID: {$app->user->id} | Rota: {$controllerId}.{$action}");
                 if (!$app->request->isAjax()) {
                     $_SESSION['federative_entity_redirect_uri'] = $_SERVER['REQUEST_URI'] ?? "";
                 }
@@ -960,6 +970,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             // 3. Gestor sem ente: após consolidação ok, exige seleção de ente
             if ($syncCompleted && !$hasError && UserAccessService::isGestorCultBr()) {
                 if (!isset($_SESSION['selectedFederativeEntity'])) {
+                    $app->log->info("[Gestores CultBR] blockAccessOnError: GestorCultBr sem Ente selecionado, redirecionando para selectFederativeEntity | Usuário ID: {$app->user->id} | Rota: {$controllerId}.{$action}");
                     if (!$app->request->isAjax()) {
                         $_SESSION['federative_entity_redirect_uri'] = $_SERVER['REQUEST_URI'] ?? "";
                     }
