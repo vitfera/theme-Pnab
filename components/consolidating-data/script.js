@@ -12,7 +12,10 @@ app.component('consolidating-data', {
             checkingStatus: false,
             hasError: false,
             errorMessage: '',
-            startSyncAttempts: 0
+            startSyncAttempts: 0,
+            statusMessage: '',
+            retryCountdown: 0,
+            retryCountdownInterval: null
         }
     },
 
@@ -21,52 +24,121 @@ app.component('consolidating-data', {
         await this.startSync()
     },
 
+    unmounted() {
+        this.clearRetryCountdown()
+    },
+
     methods: {
         async startSync() {
             if (this.syncStarted) {
                 return
             }
 
-            const MAX_START_SYNC_ATTEMPTS = 5
+            const MAX_START_SYNC_ATTEMPTS = 3
+            const RETRY_DELAY_SECONDS = 10
+            const MINIMUM_CONNECTING_MESSAGE_TIME = 4000
 
             try {
                 this.syncStarted = true
-                const response = await this.api.POST('startSync')
+                this.hasError = false
+                this.errorMessage = ''
+                this.startSyncAttempts++
+                this.statusMessage = this.getSyncAttemptMessage()
+
+                const response = await this.withMinimumDelay(
+                    this.api.POST('startSync'),
+                    this.startSyncAttempts > 1 ? MINIMUM_CONNECTING_MESSAGE_TIME : 0
+                )
                 const data = await response.json()
 
                 if (data.started) {
                     this.startSyncAttempts = 0
+                    this.statusMessage = ''
                     // Sync iniciado, começa a verificar o status
                     this.checkSyncStatus()
                 } else {
                     // Erro ao iniciar sync
                     if (data.error) {
-                        // Se há mensagem de erro específica, mostra
-                        this.hasError = true
-                        this.errorMessage = data.errorMessage || 'Não conseguimos estabelecer conexão com a API CultBr. Tente novamente mais tarde.'
-                        this.syncStarted = false
+                        this.retryStartSync(MAX_START_SYNC_ATTEMPTS, RETRY_DELAY_SECONDS, data.errorMessage)
                     } else {
-                        this.retryStartSync(MAX_START_SYNC_ATTEMPTS)
+                        this.retryStartSync(MAX_START_SYNC_ATTEMPTS, RETRY_DELAY_SECONDS)
                     }
                 }
             } catch (error) {
                 console.error('Erro ao iniciar sincronização:', error)
-                this.retryStartSync(MAX_START_SYNC_ATTEMPTS)
+                this.retryStartSync(MAX_START_SYNC_ATTEMPTS, RETRY_DELAY_SECONDS)
             }
         },
 
-        retryStartSync(maxAttempts) {
+        retryStartSync(maxAttempts, retryDelaySeconds, errorMessage) {
             this.syncStarted = false
-            this.startSyncAttempts++
 
             if (this.startSyncAttempts >= maxAttempts) {
                 this.hasError = true
-                this.errorMessage = 'Não conseguimos estabelecer conexão com a API CultBr. Tente novamente mais tarde.'
+                this.statusMessage = ''
+                this.errorMessage = errorMessage || 'Não conseguimos estabelecer conexão com a API CultBr. Tente novamente mais tarde.'
                 return
             }
 
-            // Tenta novamente após 3 segundos
-            setTimeout(() => this.startSync(), 3000)
+            this.startRetryCountdown(maxAttempts, retryDelaySeconds)
+        },
+
+        startRetryCountdown(maxAttempts, retryDelaySeconds) {
+            this.clearRetryCountdown()
+            this.retryCountdown = retryDelaySeconds
+            this.updateRetryCountdownMessage(maxAttempts)
+
+            this.retryCountdownInterval = setInterval(() => {
+                this.retryCountdown--
+
+                if (this.retryCountdown <= 0) {
+                    this.clearRetryCountdown()
+                    this.startSync()
+                    return
+                }
+
+                this.updateRetryCountdownMessage(maxAttempts)
+            }, 1000)
+        },
+
+        clearRetryCountdown() {
+            if (this.retryCountdownInterval) {
+                clearInterval(this.retryCountdownInterval)
+                this.retryCountdownInterval = null
+            }
+        },
+
+        updateRetryCountdownMessage(maxAttempts) {
+            this.statusMessage = [
+                'Não foi possível conectar à API CultBr.',
+                `Nova tentativa em ${this.retryCountdown}....`,
+                `Tentativa ${this.startSyncAttempts + 1}/${maxAttempts}`,
+            ].join('\n')
+        },
+
+        getSyncAttemptMessage() {
+            if (this.startSyncAttempts <= 1) {
+                return ''
+            }
+
+            return 'Estamos nos conectando à API CultBr....'
+        },
+
+        async withMinimumDelay(promise, minimumDelay) {
+            if (minimumDelay <= 0) {
+                return promise
+            }
+
+            const [result] = await Promise.allSettled([
+                promise,
+                new Promise(resolve => setTimeout(resolve, minimumDelay))
+            ])
+
+            if (result.status === 'rejected') {
+                throw result.reason
+            }
+
+            return result.value
         },
 
         async checkSyncStatus() {
