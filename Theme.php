@@ -575,6 +575,15 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                 return;
             }
 
+            // Apenas admins podem consultar a equipe de qualquer Ente Federado via query direta;
+            // GestorCultBr só pode consultar o(s) ente(s) com que tem vínculo real (mesma validação
+            // de ownership aplicada em Controller::POST_selectFederativeEntity).
+            if (!UserAccessService::canViewFederativeEntityTeam((int) $federativeEntityId)) {
+                $api_params['id'] = 'EQ(-1)';
+                unset($api_params['federativeEntityId']);
+                return;
+            }
+
             $federativeEntityRef = $app->em->getReference('AldirBlanc\Entities\FederativeEntity', $federativeEntityId);
             $relations = $app->repo('AldirBlanc\Entities\FederativeEntityAgentRelation')->findBy([
                 'owner' => $federativeEntityRef,
