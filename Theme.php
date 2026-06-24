@@ -821,6 +821,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             // Limpa flags de sincronização anteriores (incluindo erros)
             unset($_SESSION['gestor_cult_sync_started']);
             unset($_SESSION['gestor_cult_sync_completed']);
+            unset($_SESSION['gestor_cult_sync_started_at']);
             unset($_SESSION['gestor_cult_sync_error']);
             unset($_SESSION['gestor_cult_sync_error_message']);
 
@@ -842,6 +843,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             unset($_SESSION['federative_entity_redirect_uri']);
             unset($_SESSION['gestor_cult_sync_started']);
             unset($_SESSION['gestor_cult_sync_completed']);
+            unset($_SESSION['gestor_cult_sync_started_at']);
             unset($_SESSION['gestor_cult_sync_error']);
             unset($_SESSION['gestor_cult_sync_error_message']);
         });
