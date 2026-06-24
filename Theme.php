@@ -575,6 +575,15 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                 return;
             }
 
+            // Apenas admins podem consultar a equipe de qualquer Ente Federado via query direta;
+            // GestorCultBr só pode consultar o(s) ente(s) com que tem vínculo real (mesma validação
+            // de ownership aplicada em Controller::POST_selectFederativeEntity).
+            if (!UserAccessService::canViewFederativeEntityTeam((int) $federativeEntityId)) {
+                $api_params['id'] = 'EQ(-1)';
+                unset($api_params['federativeEntityId']);
+                return;
+            }
+
             $federativeEntityRef = $app->em->getReference('AldirBlanc\Entities\FederativeEntity', $federativeEntityId);
             $relations = $app->repo('AldirBlanc\Entities\FederativeEntityAgentRelation')->findBy([
                 'owner' => $federativeEntityRef,
@@ -821,6 +830,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             // Limpa flags de sincronização anteriores (incluindo erros)
             unset($_SESSION['gestor_cult_sync_started']);
             unset($_SESSION['gestor_cult_sync_completed']);
+            unset($_SESSION['gestor_cult_sync_started_at']);
             unset($_SESSION['gestor_cult_sync_error']);
             unset($_SESSION['gestor_cult_sync_error_message']);
 
@@ -842,6 +852,7 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
             unset($_SESSION['federative_entity_redirect_uri']);
             unset($_SESSION['gestor_cult_sync_started']);
             unset($_SESSION['gestor_cult_sync_completed']);
+            unset($_SESSION['gestor_cult_sync_started_at']);
             unset($_SESSION['gestor_cult_sync_error']);
             unset($_SESSION['gestor_cult_sync_error_message']);
         });
@@ -2207,12 +2218,26 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
         foreach ($this->getRequeredsAgentIndividualMetadata() as $key) {
             // Acessa via getMetadata para garantir que __metadata seja carregado (evita null quando relação lazy não foi inicializada)
             $value = $agent->getMetadata($key);
-            if ($value === null || $value === '' || (is_array($value) && empty($value))) {
+            if ($this->isAgentFieldValueEmpty($value)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /**
+     * Considera vazio: null, string vazia, array PHP vazio, e também '[]'/'{}' — campos
+     * multiselect/select persistem ausência de seleção como esse JSON serializado em string,
+     * não como null nem array PHP vazio (ver achado em analysis.md § completeProfile).
+     */
+    private function isAgentFieldValueEmpty($value): bool
+    {
+        if ($value === null || $value === '' || (is_array($value) && empty($value))) {
+            return true;
+        }
+
+        return is_string($value) && in_array(trim($value), ['[]', '{}'], true);
     }
 
     /**
