@@ -12,6 +12,7 @@ $this->import('
     mc-alert
     opportunity-create-model
     opportunity-create-based-model
+    opportunity-exporter
 ');
 ?>
 <div v-if="!empty" class="entity-actions">
@@ -73,6 +74,9 @@ $this->import('
                 <div v-if="entity.currentUserPermissions?.modify && entity.status != -2 && entity.__objectType == 'opportunity' && entity.isModel != 1">
                     <opportunity-create-model :entity="entity" classes="col-12"></opportunity-create-model>
                 </div> 
+                <template v-if="entity.currentUserPermissions?.modify && entity.status != -2 && entity.__objectType == 'opportunity'">
+                    <opportunity-exporter :entity="entity"></opportunity-exporter>
+                </template>
                 <?php $this->applyTemplateHook('entity-actions--primary', 'end') ?>
             </div>
             <?php $this->applyTemplateHook('entity-actions--leftGroupBtn', 'after'); ?>
