@@ -144,6 +144,15 @@ app.component('opportunity-basic-info' , {
             return this.hasPar || this.canEditPar;
         },
 
+        /**
+         * Ações do PAR permitidas para esta oportunidade (herdadas do modelo via `parActions`).
+         * Restringe o select de Ação às ações do modelo, mesmo padrão validado no "usar modelo".
+         */
+        parAcaoAllowedNames() {
+            const parActions = this.entity.parActions;
+            return Array.isArray(parActions) ? parActions : [];
+        },
+
         parReadonly() {
             return !this.canEditPar;
         },

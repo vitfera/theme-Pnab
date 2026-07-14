@@ -42,6 +42,14 @@ app.component('mc-federative-entity-par', {
             type: Boolean,
             default: false,
         },
+        /**
+         * Nomes de ações do PAR permitidas (ex.: `parActions` herdado do modelo). Se preenchido,
+         * o select de Ação lista apenas as ações cujo nome está nesta lista. Vazio = sem restrição.
+         */
+        allowedAcaoNames: {
+            type: Array,
+            default: () => [],
+        },
     },
 
     data() {
@@ -227,9 +235,20 @@ app.component('mc-federative-entity-par', {
                     String(metaEntry.id) ===
                     String(this.normalizedModel.parMetaId)
             );
-            return metaSelecionada && Array.isArray(metaSelecionada.acoes)
-                ? metaSelecionada.acoes
-                : [];
+            const acoesDaMeta =
+                metaSelecionada && Array.isArray(metaSelecionada.acoes)
+                    ? metaSelecionada.acoes
+                    : [];
+            // Restringe às ações permitidas (parActions do modelo), quando informado.
+            if (!this.allowedAcaoNames.length) {
+                return acoesDaMeta;
+            }
+            const allowedNames = this.allowedAcaoNames.map((nome) =>
+                String(nome).trim()
+            );
+            return acoesDaMeta.filter((acao) =>
+                allowedNames.includes(String(acao?.nome ?? '').trim())
+            );
         },
 
         parAtividades() {
