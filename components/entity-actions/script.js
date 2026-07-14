@@ -77,14 +77,14 @@ app.component('entity-actions', {
             
             const event = new Event("entitySave");
 
-            // Oportunidade ativada sem campos alterados: força o PATCH para disparar
-            // update:finish (e o PUT de sync com o CultBR), que o Entity.save() pularia.
-            const isEnabledOpportunity = this.entity.__objectType === 'opportunity'
-                && this.entity.id
-                && Number(this.entity.status) === 1;
+            // Oportunidade sem campos alterados: força o PATCH para disparar update:finish
+            // (e o PUT de sync com o CultBR), que o Entity.save() pularia por short-circuit.
+            // Vale em qualquer status (inclusive rascunho), pois o envio ao CultBR ocorre
+            // em qualquer save. Com campos alterados, o Entity.save() já persiste e reconcilia.
+            const isOpportunity = this.entity.__objectType === 'opportunity' && this.entity.id;
             const hasModifiedFields = Object.keys(this.entity.data(true)).length > 0;
 
-            if (isEnabledOpportunity && !hasModifiedFields) {
+            if (isOpportunity && !hasModifiedFields) {
                 this.forceBackendSave().then(() => {
                     window.dispatchEvent(event);
                 });
