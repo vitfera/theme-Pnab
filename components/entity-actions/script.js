@@ -76,9 +76,39 @@ app.component('entity-actions', {
             }
             
             const event = new Event("entitySave");
+
+            // Oportunidade ativada sem campos alterados: força o PATCH para disparar
+            // update:finish (e o PUT de sync com o CultBR), que o Entity.save() pularia.
+            const isEnabledOpportunity = this.entity.__objectType === 'opportunity'
+                && this.entity.id
+                && Number(this.entity.status) === 1;
+            const hasModifiedFields = Object.keys(this.entity.data(true)).length > 0;
+
+            if (isEnabledOpportunity && !hasModifiedFields) {
+                this.forceBackendSave().then(() => {
+                    window.dispatchEvent(event);
+                });
+                return;
+            }
+
             this.entity.save().then(() => {
                 window.dispatchEvent(event);
             });
+        },
+        /** PATCH ao backend mesmo sem campos modificados (o Entity.save() abortaria). */
+        async forceBackendSave() {
+            const entity = this.entity;
+            entity.__processing = entity.text('salvando');
+            try {
+                const res = await entity.API.persistEntity(entity);
+                return await entity.doPromise(res, (persisted) => {
+                    entity.sendMessage(entity.text('modificacoes salvas'));
+                    entity.populate(persisted, true, {});
+                    entity.cleanErrors();
+                });
+            } catch (error) {
+                return entity.doCatch(error);
+            }
         },
         exit() {
             window.location.href = this.entity.getUrl('single');
