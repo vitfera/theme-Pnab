@@ -9,7 +9,6 @@ use MapasCulturais\i;
 use MapasCulturais\App;
 use Pnab\Enum\OtherValues;
 use Respect\Validation\Validator;
-use AldirBlanc\Enum\OpportunityStatus;
 use AldirBlanc\Jobs\OportunidadeCultJob;
 use MapasCulturais\Entities\Opportunity;
 use OpportunityWorkplan\Entities\Delivery as WorkplanDelivery;
@@ -221,52 +220,25 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
         });
 
         /**
-         * Dispara o job de integração com o CultBR quando uma oportunidade é inserida
-         */
-        $app->hook('entity(Opportunity).insert:finish', function () use ($app, $theme) {
-            if (!$theme->validateIntegrationJob($this)) {
-                return;
-            }
-
-            $app->enqueueOrReplaceJob(
-                OportunidadeCultJob::SLUG,
-                [
-                    'action' => 'create',
-                    'opportunity' => $this
-                ],
-            );
-        });
-
-        /**
-         * Job CultBR no update: Ativado → enfileira update (PUT).
-         * O create (POST) do fluxo «usar modelo» é enfileirado explicitamente por saveOpportunityPostGenerate,
-         * garantindo que os dados PAR já estejam salvos antes do envio.
+         * Envio ao CultBR: qualquer save de oportunidade elegível enfileira o PUT (upsert).
+         * O endpoint é upsert (cria se não existir), então não há POST separado; o fluxo «usar modelo»
+         * dispara o envio pelo próprio save(true) do saveOpportunityPostGenerate.
          */
         $app->hook('entity(Opportunity).update:finish', function () use ($app, $theme) {
             if (!$theme->validateIntegrationJob($this)) {
                 return;
             }
 
-            // Quando a oportunidade for ativada, disparar o job de update
-            if ((int) $this->status === OpportunityStatus::ENABLED->value) {
-                // Não enfileirar update se o create ainda não foi sincronizado:
-                // o PUT chegaria ao CultBr antes do POST e resultaria em 404.
-                if (!$theme->isOpportunityCultBrCreateSynced($this)) {
-                    return;
-                }
+            $start_string = (new \DateTime())->modify(env('ALDIRBLANC_INTEGRATION_DELAY_JOB', 'now'))->format('Y-m-d H:i:s');
 
-                $start_string = (new \DateTime())->modify(env('ALDIRBLANC_INTEGRATION_DELAY_JOB', 'now'))->format('Y-m-d H:i:s');
-
-                $app->enqueueOrReplaceJob(
-                    OportunidadeCultJob::SLUG,
-                    [
-                        'action' => 'update',
-                        'opportunity' => $this
-                    ],
-                    $start_string
-                );
-                return;
-            }
+            $app->enqueueOrReplaceJob(
+                OportunidadeCultJob::SLUG,
+                [
+                    'action' => 'update',
+                    'opportunity' => $this
+                ],
+                $start_string
+            );
         });
 
         /**
@@ -2454,19 +2426,6 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
     {
         return (bool) filter_var(
             $entity->getMetadata(\AldirBlanc\Controller::OPPORTUNITY_META_IS_GENERATED_FROM_MODEL),
-            FILTER_VALIDATE_BOOLEAN
-        );
-    }
-
-    /**
-     * True após OportunidadeCultJob create concluir com sucesso (metadado cultBrCreateSynced).
-     *
-     * @param Opportunity $entity
-     */
-    private function isOpportunityCultBrCreateSynced($entity): bool
-    {
-        return (bool) filter_var(
-            $entity->getMetadata(\AldirBlanc\Controller::OPPORTUNITY_META_CULT_BR_CREATE_SYNCED),
             FILTER_VALIDATE_BOOLEAN
         );
     }
