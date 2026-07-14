@@ -1113,6 +1113,46 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                     }
                 }
 
+                // Validação do instrumento PAR (obrigatório para o gestor). Vale só na
+                // oportunidade raiz (não em fases) e não bloqueia admin. Só exige quando o
+                // ente tem exercícios do PAR — mesma regra do "usar modelo" (evita travar
+                // ente sem PAR). A ação ainda precisa ser compatível com o modelo (parActions).
+                if (UserAccessService::isGestorCultBr() && !$this->parent) {
+                    $parExercicios = FederativeEntityService::getParExerciciosForSessionSelectedEntity();
+                    if (!empty($parExercicios)) {
+                        $parExercicioId = (string) ($this->parExercicioId ?? '');
+                        $parMetaId = (string) ($this->parMetaId ?? '');
+                        $parAcaoId = (string) ($this->parAcaoId ?? '');
+                        $parAtividadeId = (string) ($this->parAtividadeId ?? '');
+
+                        if ($parExercicioId === '') {
+                            $errors['parExercicioId'] = [i::__('O campo "Exercício" é obrigatório.')];
+                        }
+                        if ($parMetaId === '') {
+                            $errors['parMetaId'] = [i::__('O campo "Meta" é obrigatório.')];
+                        }
+                        if ($parAtividadeId === '') {
+                            $errors['parAtividadeId'] = [i::__('O campo "Atividade" é obrigatório.')];
+                        }
+                        if ($parAcaoId === '') {
+                            $errors['parAcaoId'] = [i::__('O campo "Ação" é obrigatório.')];
+                        } else {
+                            // Ação deve estar entre as permitidas pelo modelo (parActions).
+                            $parActionsRaw = $this->parActions;
+                            if (is_string($parActionsRaw)) {
+                                $parActionsRaw = json_decode($parActionsRaw, true) ?? [];
+                            }
+                            $parActions = is_array($parActionsRaw) ? $parActionsRaw : [];
+                            if (!empty($parActions)) {
+                                $acaoNome = FederativeEntityService::getParActionNameByAcaoId($parAcaoId);
+                                if ($acaoNome === null || !in_array($acaoNome, $parActions, true)) {
+                                    $errors['parAcaoId'] = [i::__('A ação selecionada não é compatível com este modelo.')];
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Validação: Utilização de recursos de outras fontes
                 $recursos = self::ensureArray($this->recursosOutrasFontes);
                 $houve = $recursos['houveUtilizacao'] ?? '';
