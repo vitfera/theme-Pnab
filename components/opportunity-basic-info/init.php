@@ -10,6 +10,9 @@ $entity = $this->controller->requestedEntity;
 $this->jsObject['config']['opportunityBasicInfo'] = [
     'date' => $entity::CONTINUOUS_FLOW_DATE,
     'canManageOfficialModelParActions' => UserAccessService::canAssociatePARAction(),
+    // Admin (ou permissão maior) vê o instrumento PAR sempre readonly; os demais
+    // (GestorCultBr) podem editar quando a oportunidade está sem os dados do PAR.
+    'userIsAdmin' => UserAccessService::isAdmin(),
 ];
 
 $this->jsObject['config']['opportunityOtherOptions'] = [

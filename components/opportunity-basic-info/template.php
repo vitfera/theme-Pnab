@@ -11,6 +11,7 @@ $this->import('
     custom-http-multiselect
     mc-federative-entity-par
     mc-alert
+    mc-modal
     entity-admins
     entity-cover
     entity-field
@@ -106,9 +107,10 @@ $this->import('
                         prop="longDescription"></entity-field>
 
                     <mc-federative-entity-par
-                        v-if="entity.parExercicioId || entity.parMetaId || entity.parAcaoId || entity.parAtividadeId"
-                        class="header-opp__field header-opp__field--par-readonly grid-12 col-12" readonly
-                        load-par-exercicios :model-value="parSelecoesParaExibicao"></mc-federative-entity-par>
+                        v-if="showParField"
+                        class="header-opp__field header-opp__field--par-readonly grid-12 col-12"
+                        :readonly="parReadonly"
+                        load-par-exercicios v-model="parModel"></mc-federative-entity-par>
                 </div>
             </template>
         </mc-card>
@@ -213,3 +215,21 @@ $this->import('
     </aside>
 </mc-container>
 <confirm-before-exit :entity="entity"></confirm-before-exit>
+
+<!-- Aviso: oportunidade sem dados do PAR. Abre automaticamente (via ref) quando o usuário pode editar. -->
+<mc-modal ref="parMissingModal" classes="opportunity-basic-info__par-missing-modal"
+    title="<?php i::esc_attr_e('Dados do PAR ausentes') ?>">
+    <template #default>
+        <mc-alert type="warning">
+            Esta oportunidade está sem os dados do PAR.<br>
+            Preencha o <strong style="color: var(--mc-danger-500)">Exercício</strong>,
+            a <strong style="color: var(--mc-danger-500)">Meta</strong>,
+            a <strong style="color: var(--mc-danger-500)">Ação</strong> e
+            a <strong style="color: var(--mc-danger-500)">Atividade</strong>
+            no campo do cabeçalho para regularizá-la.
+        </mc-alert>
+    </template>
+    <template #actions="modal">
+        <button class="button button--primary" @click="modal.close()"><?php i::_e('Entendi') ?></button>
+    </template>
+</mc-modal>
