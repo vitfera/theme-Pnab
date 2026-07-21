@@ -194,7 +194,9 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
          * Roda antes de qualquer persistência — se inválido, nada é criado.
          */
         $app->hook('POST(opportunity.generateopportunity):before', function () use ($app) {
-            if (!UserAccessService::isGestorCultBr()) {
+            // Admin escolhe qualquer ação do PAR, inclusive fora das previstas no modelo —
+            // vale mesmo quando ele acumula o papel de gestor.
+            if (!UserAccessService::isGestorCultBr() || UserAccessService::isAdmin()) {
                 return;
             }
 
@@ -1101,10 +1103,11 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                 }
 
                 // Validação do instrumento PAR (obrigatório para o gestor). Vale só na
-                // oportunidade raiz (não em fases) e não bloqueia admin. Só exige quando o
-                // ente tem exercícios do PAR — mesma regra do "usar modelo" (evita travar
-                // ente sem PAR). A ação ainda precisa ser compatível com o modelo (parActions).
-                if (UserAccessService::isGestorCultBr() && !$this->parent) {
+                // oportunidade raiz (não em fases) e nunca bloqueia admin — nem quando ele
+                // também tem o papel de gestor. Só exige quando o ente tem exercícios do PAR
+                // — mesma regra do "usar modelo" (evita travar ente sem PAR). A ação ainda
+                // precisa ser compatível com o modelo (parActions).
+                if (UserAccessService::isGestorCultBr() && !UserAccessService::isAdmin() && !$this->parent) {
                     $parExercicios = FederativeEntityService::getParExerciciosForSessionSelectedEntity();
                     if (!empty($parExercicios)) {
                         $parActionsRaw = $this->parActions;
