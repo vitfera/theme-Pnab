@@ -11,6 +11,7 @@ return [
     'payload' => i::__('Payload gerado'),
     'resposta' => i::__('Resposta do servidor'),
     'cabecalhos' => i::__('Cabeçalhos da resposta'),
+    'resposta_truncada' => i::__('[resposta truncada — o servidor devolveu {bytes} bytes]'),
     'por_usuario' => i::__('por usuário #{id}'),
     'enviado_em' => i::__('Enviado em'),
     'endpoint' => i::__('Endpoint'),

@@ -211,9 +211,14 @@ app.component('opportunity-cultbr-logs', {
             if (value === null || value === undefined) {
                 return '';
             }
-            // Resposta não-JSON é gravada como {"raw": "..."} pelo CultBrRequestLogService.
-            if (typeof value === 'object' && Object.keys(value).length === 1 && 'raw' in value) {
-                return String(value.raw);
+            // Resposta não-JSON é gravada como {"raw": "..."} pelo CultBrRequestLogService —
+            // com _truncated quando passou do teto de tamanho.
+            if (typeof value === 'object' && 'raw' in value) {
+                return value._truncated
+                    ? String(value.raw) + '
+
+' + this.translateMessage('resposta_truncada', {bytes: value._originalLength})
+                    : String(value.raw);
             }
             try {
                 return JSON.stringify(value, null, 2);
