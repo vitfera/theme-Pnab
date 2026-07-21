@@ -10,9 +10,12 @@
 
     // Um card por envio, separados entre si; o container da aba não tem fundo próprio.
     // Padding menor que o do mc-card (size(24)): a linha do envio é só uma faixa de leitura.
+    // A borda é o que delimita o card na visualização da oportunidade, cujo fundo é branco
+    // (na gestão o fundo cinza do action-edit já daria o contraste).
     &__run-card {
         padding: size(8) size(16);
         margin-bottom: size(12);
+        border: size(1) solid var(--mc-gray-300, #ececec);
 
         &:last-of-type {
             margin-bottom: 0;
