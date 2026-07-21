@@ -1114,8 +1114,10 @@ class Theme extends \MapasCulturais\Themes\BaseV2\Theme
                         $parActions = is_array($parActionsRaw) ? $parActionsRaw : [];
 
                         // Sem parActions não há como validar a ação escolhida: bloqueia o save do PAR.
+                        // A mensagem fala do vínculo com o modelo — problema que o gestor não
+                        // resolve preenchendo os campos, diferente do alerta da tela.
                         if (empty($parActions)) {
-                            $errors['parAcaoId'] = [i::__('Não foi encontrado ação do PAR associada à esta oportunidade, por favor, entre em contato com o suporte.')];
+                            $errors['parAcaoId'] = [i::__('Este edital não está vinculado a nenhuma ação do PAR do modelo que o originou. Entre em contato com o suporte.')];
                         } else {
                             $parExercicioId = (string) ($this->parExercicioId ?? '');
                             $parMetaId = (string) ($this->parMetaId ?? '');
